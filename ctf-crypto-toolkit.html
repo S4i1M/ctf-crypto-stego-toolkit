@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CTF Crypto & Stego Toolkit — S4i1m</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c0f;
+    --surface: #111418;
+    --surface2: #181d24;
+    --green: #00ff9d;
+    --green-dim: #00cc7a;
+    --green-dark: #003d25;
+    --amber: #ffb830;
+    --blue: #4db8ff;
+    --red: #ff4d6d;
+    --purple: #c084fc;
+    --text: #e0e8f0;
+    --muted: #6b7a8a;
+    --border: rgba(0,255,157,0.15);
+    --mono: 'Share Tech Mono', monospace;
+    --display: 'Syne', sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    min-height: 100vh;
+  }
+  body::after {
+    content:'';
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(0,255,157,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,157,0.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events:none; z-index:0;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top:0;
+    background: rgba(10,12,15,0.95);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+  }
+  .brand { font-family: var(--display); font-size:18px; font-weight:800; color:var(--green); }
+  .brand span { color: var(--muted); font-weight:700; font-size:13px; margin-left:10px; }
+
+  .tabs {
+    display: flex; gap: 4px;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    overflow-x: auto;
+    position: sticky; top: 57px;
+    z-index: 99;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    direction: ltr;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    padding: 12px 18px;
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: all 0.2s;
+    background: none; border-top:none; border-left:none; border-right:none;
+    font-family: var(--mono);
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--green); border-bottom-color: var(--green); }
+  .tab-select-wrap {
+    display: none;
+    padding: 10px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 57px;
+    z-index: 99;
+  }
+  .tab-select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid rgba(0,255,157,0.3);
+    color: var(--green);
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 1px;
+    padding: 10px 14px;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2300ff9d' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+  }
+  @media(max-width: 640px) {
+    .tabs { display: none; }
+    .tab-select-wrap { display: block; }
+  }
+
+  .main { max-width: 900px; margin: 0 auto; padding: 32px 24px; position:relative; z-index:1; }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .section-title {
+    font-family: var(--display);
+    font-size: 22px; font-weight: 800;
+    color: #fff; margin-bottom: 6px;
+  }
+  .section-desc { font-size: 13px; color: var(--muted); margin-bottom: 28px; line-height:1.7; }
+
+  .tool-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .tool-label {
+    font-size: 11px; letter-spacing: 2px;
+    color: var(--green); margin-bottom: 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .tool-label.amber { color: var(--amber); }
+  .tool-label.blue { color: var(--blue); }
+  .tool-label.purple { color: var(--purple); }
+  .tool-label.red { color: var(--red); }
+
+  textarea, input[type=text], input[type=number] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 12px;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  textarea { min-height: 80px; }
+  textarea:focus, input:focus { border-color: rgba(0,255,157,0.4); }
+
+  .row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items:center; }
+
+  button {
+    background: var(--green-dark);
+    border: 1px solid rgba(0,255,157,0.3);
+    color: var(--green);
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 1px;
+    padding: 9px 18px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  button:hover { background: rgba(0,255,157,0.2); }
+  button.amber { background: rgba(255,184,48,0.08); border-color: rgba(255,184,48,0.3); color: var(--amber); }
+  button.amber:hover { background: rgba(255,184,48,0.15); }
+  button.blue { background: rgba(77,184,255,0.08); border-color: rgba(77,184,255,0.3); color: var(--blue); }
+  button.blue:hover { background: rgba(77,184,255,0.15); }
+  button.red { background: rgba(255,77,109,0.08); border-color: rgba(255,77,109,0.3); color: var(--red); }
+  button.red:hover { background: rgba(255,77,109,0.15); }
+  button.purple { background: rgba(192,132,252,0.08); border-color: rgba(192,132,252,0.3); color: var(--purple); }
+
+  .output {
+    margin-top: 12px;
+    background: var(--bg);
+    border: 1px solid rgba(0,255,157,0.1);
+    padding: 12px;
+    font-size: 13px;
+    color: var(--green);
+    word-break: break-all;
+    min-height: 44px;
+    white-space: pre-wrap;
+    position: relative;
+  }
+  .output.amber { color: var(--amber); border-color: rgba(255,184,48,0.1); }
+  .output.blue { color: var(--blue); border-color: rgba(77,184,255,0.1); }
+  .output.red { color: var(--red); }
+  .output.purple { color: var(--purple); }
+
+  .copy-btn {
+    position: absolute; top: 8px; right: 8px;
+    font-size: 10px; padding: 4px 10px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+  .copy-btn:hover { color: var(--text); }
+
+  .shift-input { width: 70px !important; display: inline-block; }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--surface2);
+    border: 1px solid rgba(0,255,157,0.2);
+    border-radius: 0;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: var(--green);
+    border-radius: 0;
+    border: 2px solid var(--bg);
+    cursor: pointer;
+    box-shadow: 0 0 6px rgba(0,255,157,0.4);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: var(--green);
+    border-radius: 0;
+    border: 2px solid var(--bg);
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-runnable-track {
+    background: linear-gradient(to right, rgba(0,255,157,0.25), rgba(0,255,157,0.05));
+    height: 4px;
+  }
+  input[type=range]:hover::-webkit-slider-thumb { box-shadow: 0 0 10px rgba(0,255,157,0.7); }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media(max-width:600px){ .grid2 { grid-template-columns:1fr; } }
+
+  /* Cheatsheet */
+  .cheat-grid { display: flex; flex-direction: column; gap: 12px; }
+  .cheat-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--green);
+    padding: 14px 18px;
+    display: flex; gap: 16px;
+    align-items: flex-start;
+  }
+  .cheat-item.amber { border-left-color: var(--amber); }
+  .cheat-item.blue { border-left-color: var(--blue); }
+  .cheat-item.red { border-left-color: var(--red); }
+  .cheat-item.purple { border-left-color: var(--purple); }
+  .cheat-name { font-size:13px; font-weight:700; color:#fff; min-width:140px; }
+  .cheat-detail { font-size:12px; color:var(--muted); line-height:1.8; }
+  .cheat-detail code { color: var(--green); font-family: var(--mono); }
+
+  .tag-pill {
+    display:inline-block; font-size:10px; letter-spacing:1px;
+    padding: 2px 8px; border: 1px solid; margin-right:4px;
+  }
+  .tag-green { color:var(--green); border-color:rgba(0,255,157,0.3); }
+  .tag-amber { color:var(--amber); border-color:rgba(255,184,48,0.3); }
+  .tag-blue { color:var(--blue); border-color:rgba(77,184,255,0.3); }
+  .tag-red { color:var(--red); border-color:rgba(255,77,109,0.3); }
+  .tag-purple { color:var(--purple); border-color:rgba(192,132,252,0.3); }
+
+  .identify-result { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+  .id-row {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 10px 14px;
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:13px;
+  }
+  .id-name { color:#fff; }
+  .id-conf { font-size:11px; letter-spacing:1px; }
+  .conf-high { color:var(--green); }
+  .conf-med { color:var(--amber); }
+  .conf-low { color:var(--muted); }
+
+  .hint-box {
+    background: rgba(0,255,157,0.04);
+    border: 1px solid rgba(0,255,157,0.1);
+    padding: 14px 18px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.8;
+    margin-bottom: 20px;
+  }
+  .hint-box span { color: var(--green); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">&gt;_ CTF TOOLKIT <span>by S4i1M</span></div>
+  <div style="font-size:11px;color:var(--muted);letter-spacing:1px;">CRYPTO + STEGO</div>
+</header>
+
+<div class="tab-select-wrap">
+  <select class="tab-select" onchange="showTabByName(this.value)">
+    <option value="identify">&gt;_ AUTO IDENTIFY</option>
+    <option value="base">&gt;_ BASE ENCODING</option>
+    <option value="hash">&gt;_ HASH</option>
+    <option value="classical">&gt;_ CLASSICAL CIPHERS</option>
+    <option value="stego">&gt;_ STEGO HINTS</option>
+    <option value="cheatsheet">&gt;_ CHEATSHEET</option>
+  </select>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('identify')">AUTO IDENTIFY</button>
+  <button class="tab" onclick="showTab('base')">BASE ENCODING</button>
+  <button class="tab" onclick="showTab('hash')">HASH</button>
+  <button class="tab" onclick="showTab('classical')">CLASSICAL CIPHERS</button>
+  <button class="tab" onclick="showTab('stego')">STEGO HINTS</button>
+  <button class="tab" onclick="showTab('cheatsheet')">CHEATSHEET</button>
+</div>
+
+<div class="main">
+
+  <!-- AUTO IDENTIFY -->
+  <div id="panel-identify" class="panel active">
+    <div class="section-title">Auto Identifier</div>
+    <p class="section-desc">Paste any suspicious string and this will guess what encoding or cipher it is.</p>
+    <div class="tool-card">
+      <div class="tool-label">// PASTE YOUR STRING</div>
+      <textarea id="identify-input" placeholder="Paste encoded/hashed/ciphered text here..."></textarea>
+      <div class="row">
+        <button onclick="identifyString()">IDENTIFY →</button>
+        <button class="red" onclick="document.getElementById('identify-input').value='';document.getElementById('identify-results').innerHTML=''">CLEAR</button>
+      </div>
+      <div id="identify-results" class="identify-result"></div>
+    </div>
+  </div>
+
+  <!-- BASE ENCODING -->
+  <div id="panel-base" class="panel">
+    <div class="section-title">Base Encoding / Decoding</div>
+    <p class="section-desc">Base64, Base32, Base16 (hex), Base58 and URL encoding. Most CTF crypto starts here.</p>
+
+    <div class="tool-card">
+      <div class="tool-label">// BASE64</div>
+      <textarea id="b64-input" placeholder="Text or Base64 string..."></textarea>
+      <div class="row">
+        <button onclick="b64('encode')">ENCODE</button>
+        <button class="amber" onclick="b64('decode')">DECODE</button>
+      </div>
+      <div class="output" id="b64-out"><span style="color:var(--muted)">output appears here...</span><button class="copy-btn" onclick="copyOut('b64-out')">COPY</button></div>
+    </div>
+
+    <div class="tool-card">
+      <div class="tool-label amber">// BASE32</div>
+      <textarea id="b32-input" placeholder="Text or Base32 string..."></textarea>
+      <div class="row">
+        <button onclick="b32('encode')">ENCODE</button>
+        <button class="amber" onclick="b32('decode')">DECODE</button>
+      </div>
+      <div class="output amber" id="b32-out"><span style="color:var(--muted)">output appears here...</span><button class="copy-btn" onclick="copyOut('b32-out')">COPY</button></div>
+    </div>
+
+    <div class="tool-card">
+      <div class="tool-label blue">// HEX (Base16)</div>
+      <textarea id="hex-input" placeholder="Text or hex string (e.g. 48656c6c6f)..."></textarea>
+      <div class="row">
+        <button onclick="hexEncode()">TEXT → HEX</button>
+        <button class="blue" onclick="hexDecode()">HEX → TEXT</button>
+      </div>
+      <div class="output blue" id="hex-out"><span style="color:var(--muted)">output appears here...</span><button class="copy-btn" onclick="copyOut('hex-out')">COPY</button></div>
+    </div>
+
+    <div class="tool-card">
+      <div class="tool-label">// URL ENCODING</div>
+      <textarea id="url-input" placeholder="Text or URL-encoded string..."></textarea>
+      <div class="row">
+        <button onclick="urlEnc('encode')">ENCODE</button>
+        <button class="amber" onclick="urlEnc('decode')">DECODE</button>
+      </div>
+      <div class="output" id="url-out"><span style="color:var(--muted)">output appears here...</span><button class="copy-btn" onclick="copyOut('url-out')">COPY</button></div>
+    </div>
+
+    <div class="tool-card">
+      <div class="tool-label blue">// BINARY ↔ TEXT</div>
+      <textarea id="bin-input" placeholder="Text or binary (e.g. 01001000 01100101)..."></textarea>
+      <div class="row">
+        <button onclick="binConv('encode')">TEXT → BINARY</button>
+        <button class="blue" onclick="binConv('decode')">BINARY → TEXT</button>
+      </div>
+      <div class="output blue" id="bin-out"><span style="color:var(--muted)">output appears here...</span><button class="copy-btn" onclick="copyOut('bin-out')">COPY</button></div>
+    </div>
+  </div>
+
+  <!-- HASH -->
+  <div id="panel-hash" class="panel">
+    <div class="section-title">Hash Tools</div>
+    <p class="section-desc">Generate MD5, SHA1, SHA256, SHA512 hashes. Identify hash types from length and charset.</p>
+
+    <div class="hint-box">
+      <span>TIP:</span> CTF flags are often hashed. If you find a hash, first try to identify it below, then use
+      online crackers like <span>crackstation.net</span> or <span>hashes.com</span> for weak/common passwords.
+    </div>
+
+    <div class="tool-card">
+      <div class="tool-label">// GENERATE HASH</div>
+      <textarea id="hash-input" placeholder="Enter text to hash..."></textarea>
+      <div class="row">
+        <button onclick="genHash('MD5')">MD5</button>
+        <button onclick="genHash('SHA-1')">SHA1</button>
+        <button class="amber" onclick="genHash('SHA-256')">SHA256</button>
+        <button class="blue" onclick="genHash('SHA-512')">SHA512</button>
+      </div>
+      <div class="output" id="hash-out"><span style="color:var(--muted)">hash output here...</span><button class="copy-btn" onclick="copyOut('hash-out')">COPY</button></div>
+    </div>
+
+    <div class="tool-card">
+      <div class="tool-label amber">// IDENTIFY HASH TYPE</div>
+      <textarea id="hashid-input" placeholder="Paste a hash to identify its type..."></textarea>
+      <div class="row">
+        <button onclick="identifyHash()">IDENTIFY HASH</button>
+      </div>
+      <div class="identify-result" id="hashid-out"></div>
+    </div>
+  </div>
+
+  <!-- CLASSICAL CIPHERS -->
+  <div id="panel-classical" class="panel">
+    <div class="section-title">Classical Ciphers</div>
+    <p class="section-desc">Caesar, ROT13, Atbash, Vigenère, Morse code and more. Most beginner CTF crypto uses these.</p>
+
+    <div class="tool-card">
+      <div class="tool-label">// CAESAR CIPHER</div>
+      <textarea id="caesar-input" placeholder="Enter text..."></textarea>
+      <div class="row">
+        <span style="color:var(--muted);font-size:12px;">SHIFT:</span>
+        <input type="number" id="caesar-shift" value="13" min="1" max="25" class="shift-input">
+        <button onclick="caesar('encode')">ENCODE</button>
+        <button class="amber" onclick="caesar('decode')">DECODE</button>
+        <button class="blue" onclick="caesarBrute()">BRUTE ALL 25</button>
+      </div>
+      <div class="output" id="caesar-out"><span style="color:var(--muted)">output here...</span><button class="copy-btn" onclick="copyOut('caesar-out')">COPY</button></div>
+    </div>
+
+    <div class="tool-card">
+      <div class="tool-label amber">// ROT13</div>
+      <textarea id="rot13-input" placeholder="Enter text..."></textarea>
+      <div class="row">
+        <button onclick="rot13Conv()">CONVERT (ROT13 is its own inverse)</button>
+      </div>
+      <div class="output amber" id="rot13-out"><span style="color:var(--muted)">output here...</span><button class="copy-btn" onclick="copyOut('rot13-out')">COPY</button></div>
+    </div>
+
+    <div class="tool-card">
+      <div class="tool-label blue">// ATBASH CIPHER</div>
+      <textarea id="atbash-input" placeholder="Enter text (A↔Z, B↔Y, ...)"></textarea>
+      <div class="row">
+        <button onclick="atbash()">CONVERT (symmetric)</button>
+      </div>
+      <div class="output blue" id="atbash-out"><span style="color:var(--muted)">output here...</span><button class="copy-btn" onclick="copyOut('atbash-out')">COPY</button></div>
+    </div>
+
+    <div class="tool-card">
+      <div class="tool-label purple">// VIGENÈRE CIPHER</div>
+      <textarea id="vig-input" placeholder="Enter text..."></textarea>
+      <div class="row" style="margin-bottom:8px;">
+        <span style="color:var(--muted);font-size:12px;">KEY:</span>
+        <input type="text" id="vig-key" placeholder="e.g. SECRET" style="width:160px;">
+        <button class="purple" onclick="vigenere('encode')">ENCODE</button>
+        <button class="amber" onclick="vigenere('decode')">DECODE</button>
+      </div>
+      <div class="output purple" id="vig-out"><span style="color:var(--muted)">output here...</span><button class="copy-btn" onclick="copyOut('vig-out')">COPY</button></div>
+    </div>
+
+    <div class="tool-card">
+      <div class="tool-label red">// MORSE CODE</div>
+      <textarea id="morse-input" placeholder="Text or morse (e.g. .... . .-.. .-.. ---)"></textarea>
+      <div class="row">
+        <button onclick="morse('encode')">TEXT → MORSE</button>
+        <button class="red" onclick="morse('decode')">MORSE → TEXT</button>
+      </div>
+      <div class="output red" id="morse-out"><span style="color:var(--muted)">output here...</span><button class="copy-btn" onclick="copyOut('morse-out')">COPY</button></div>
+    </div>
+  </div>
+
+  <!-- STEGO HINTS -->
+  <div id="panel-stego" class="panel">
+    <div class="section-title">Steganography Hints</div>
+    <p class="section-desc">Common techniques and tools for CTF stego challenges. Use these as your checklist.</p>
+
+    <div class="hint-box">
+      <span>WORKFLOW:</span> Always start with strings → file → exiftool → then go deeper based on file type.
+    </div>
+
+    <div class="cheat-grid">
+      <div class="cheat-item">
+        <div class="cheat-name">First Steps (Any File)</div>
+        <div class="cheat-detail">
+          Run <code>strings file.png</code> — hidden text often just sitting there<br>
+          Run <code>file suspicious.jpg</code> — confirm actual file type<br>
+          Run <code>exiftool image.png</code> — check metadata for hidden data<br>
+          Run <code>binwalk file.png</code> — extract embedded files
+        </div>
+      </div>
+      <div class="cheat-item amber">
+        <div class="cheat-name">Image Stego (PNG/JPG)</div>
+        <div class="cheat-detail">
+          <code>steghide extract -sf image.jpg</code> — try with empty password first<br>
+          <code>zsteg image.png</code> — LSB analysis for PNGs<br>
+          <code>stegsolve</code> — visual bit plane analysis<br>
+          Open in HxD/hex editor — look for appended data after EOF marker
+        </div>
+      </div>
+      <div class="cheat-item blue">
+        <div class="cheat-name">Audio Stego (WAV/MP3)</div>
+        <div class="cheat-detail">
+          Open in <code>Audacity</code> — look at spectrogram view (flag often visible!)<br>
+          <code>View → Spectrogram</code> in Audacity<br>
+          <code>mp3stego</code> for MP3 files<br>
+          Check for morse code patterns in the waveform
+        </div>
+      </div>
+      <div class="cheat-item red">
+        <div class="cheat-name">PDF / Office Files</div>
+        <div class="cheat-detail">
+          <code>pdfinfo file.pdf</code> — metadata check<br>
+          <code>pdf-parser.py</code> — extract objects<br>
+          Check for white text on white background<br>
+          Hidden layers in PDFs — Adobe Reader → layers panel
+        </div>
+      </div>
+      <div class="cheat-item purple">
+        <div class="cheat-name">LSB Steganography</div>
+        <div class="cheat-detail">
+          Least Significant Bit — data hidden in pixel color LSBs<br>
+          Tool: <code>zsteg -a image.png</code> (tries all combinations)<br>
+          Tool: <code>stegsolve</code> — plane 0 of R/G/B channels<br>
+          Online: stylesuxx.github.io/steganography
+        </div>
+      </div>
+      <div class="cheat-item">
+        <div class="cheat-name">File Signatures (Magic Bytes)</div>
+        <div class="cheat-detail">
+          PNG: <code>89 50 4E 47</code><br>
+          JPG: <code>FF D8 FF</code><br>
+          ZIP: <code>50 4B 03 04</code><br>
+          PDF: <code>25 50 44 46</code><br>
+          GIF: <code>47 49 46 38</code><br>
+          If extension is wrong, rename using true magic bytes
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHEATSHEET -->
+  <div id="panel-cheatsheet" class="panel">
+    <div class="section-title">Quick Reference Cheatsheet</div>
+    <p class="section-desc">Pattern recognition for CTF crypto. See a string → instantly know what it is.</p>
+
+    <div class="cheat-grid">
+      <div class="cheat-item">
+        <div>
+          <span class="tag-pill tag-green">BASE64</span>
+          <div class="cheat-name" style="margin-top:6px;">Base64</div>
+          <div class="cheat-detail">
+            Chars: <code>A-Z a-z 0-9 + / =</code><br>
+            Ends with <code>=</code> or <code>==</code> padding<br>
+            Length always multiple of 4<br>
+            Example: <code>SGVsbG8gV29ybGQ=</code>
+          </div>
+        </div>
+      </div>
+      <div class="cheat-item amber">
+        <div>
+          <span class="tag-pill tag-amber">BASE32</span>
+          <div class="cheat-name" style="margin-top:6px;">Base32</div>
+          <div class="cheat-detail">
+            Chars: <code>A-Z 2-7 =</code> (uppercase only)<br>
+            Always ends with <code>=</code> padding<br>
+            Example: <code>JBSWY3DPEBLW64TMMQ======</code>
+          </div>
+        </div>
+      </div>
+      <div class="cheat-item blue">
+        <div>
+          <span class="tag-pill tag-blue">HEX</span>
+          <div class="cheat-name" style="margin-top:6px;">Hexadecimal</div>
+          <div class="cheat-detail">
+            Chars: <code>0-9 a-f</code> only<br>
+            Often prefixed with <code>0x</code><br>
+            Length always even<br>
+            Example: <code>48656c6c6f</code> = Hello
+          </div>
+        </div>
+      </div>
+      <div class="cheat-item red">
+        <div>
+          <span class="tag-pill tag-red">HASH</span>
+          <div class="cheat-name" style="margin-top:6px;">Hash Lengths</div>
+          <div class="cheat-detail">
+            MD5: <code>32 hex chars</code><br>
+            SHA1: <code>40 hex chars</code><br>
+            SHA256: <code>64 hex chars</code><br>
+            SHA512: <code>128 hex chars</code><br>
+            bcrypt: starts with <code>$2b$</code>
+          </div>
+        </div>
+      </div>
+      <div class="cheat-item purple">
+        <div>
+          <span class="tag-pill tag-purple">CLASSICAL</span>
+          <div class="cheat-name" style="margin-top:6px;">Classical Cipher Hints</div>
+          <div class="cheat-detail">
+            Caesar: letter frequency still visible, just shifted<br>
+            ROT13: Caesar with shift 13 (letters only)<br>
+            Atbash: A→Z B→Y pattern<br>
+            Vigenère: repeating key, harder to spot<br>
+            Morse: only <code>. - /</code> characters
+          </div>
+        </div>
+      </div>
+      <div class="cheat-item">
+        <div>
+          <span class="tag-pill tag-green">OTHER</span>
+          <div class="cheat-name" style="margin-top:6px;">Other Encodings</div>
+          <div class="cheat-detail">
+            URL encode: <code>%xx</code> format, <code>%20</code> = space<br>
+            Binary: only <code>0</code> and <code>1</code>, groups of 8<br>
+            Octal: digits <code>0-7</code> only<br>
+            ASCII codes: numbers 32–126<br>
+            Brainfuck: only <code>+-[]&lt;&gt;.,</code> chars
+          </div>
+        </div>
+      </div>
+      <div class="cheat-item amber">
+        <div>
+          <span class="tag-pill tag-amber">ONLINE TOOLS</span>
+          <div class="cheat-name" style="margin-top:6px;">Best Online Tools</div>
+          <div class="cheat-detail">
+            <code>cyberchef.org</code> — all-in-one, use first<br>
+            <code>crackstation.net</code> — hash cracking<br>
+            <code>dcode.fr</code> — cipher identification<br>
+            <code>hashes.com</code> — hash lookup<br>
+            <code>cryptii.com</code> — visual encoding chains
+          </div>
+        </div>
+      </div>
+      <div class="cheat-item blue">
+        <div>
+          <span class="tag-pill tag-blue">FLAG FORMAT</span>
+          <div class="cheat-name" style="margin-top:6px;">Common Flag Formats</div>
+          <div class="cheat-detail">
+            <code>CTF{...}</code> <code>flag{...}</code> <code>FLAG{...}</code><br>
+            Always try decoding until you see one of these<br>
+            Sometimes nested: base64 of a caesar of hex<br>
+            If output looks random, try another layer
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function showTab(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  event.target.classList.add('active');
+  const sel = document.querySelector('.tab-select');
+  if (sel) sel.value = name;
+}
+
+function showTabByName(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+}
+
+const outputStore = {};
+
+function setOut(id, val) {
+  outputStore[id] = val;
+  const el = document.getElementById(id);
+  el.innerHTML = '';
+  const pre = document.createElement('span');
+  pre.style.whiteSpace = 'pre-wrap';
+  pre.style.wordBreak = 'break-all';
+  pre.textContent = val;
+  const btn = document.createElement('button');
+  btn.className = 'copy-btn';
+  btn.textContent = 'COPY';
+  btn.onclick = (e) => { e.stopPropagation(); copyOut(id); };
+  el.appendChild(pre);
+  el.appendChild(btn);
+}
+
+function copyOut(id) {
+  const text = outputStore[id] || '';
+  if (!text) return;
+  const btn = document.querySelector('#' + id + ' .copy-btn');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      if (btn) { btn.textContent = 'COPIED!'; setTimeout(() => btn.textContent = 'COPY', 1500); }
+    }).catch(() => fallbackCopy(text, btn));
+  } else {
+    fallbackCopy(text, btn);
+  }
+}
+
+function fallbackCopy(text, btn) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  try { document.execCommand('copy'); if(btn){btn.textContent='COPIED!';setTimeout(()=>btn.textContent='COPY',1500);} }
+  catch(e) { if(btn) btn.textContent='FAILED'; }
+  document.body.removeChild(ta);
+}
+
+// Base64
+function b64(mode) {
+  const v = document.getElementById('b64-input').value;
+  try {
+    setOut('b64-out', mode === 'encode' ? btoa(unescape(encodeURIComponent(v))) : decodeURIComponent(escape(atob(v))));
+  } catch(e) { setOut('b64-out', 'ERROR: ' + e.message); }
+}
+
+// Base32
+const B32CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+function b32(mode) {
+  const v = document.getElementById('b32-input').value.trim();
+  try {
+    if(mode === 'encode') {
+      let bits = '', out = '';
+      for(let i=0;i<v.length;i++) { bits += v.charCodeAt(i).toString(2).padStart(8,'0'); }
+      while(bits.length % 5) bits += '0';
+      for(let i=0;i<bits.length;i+=5) out += B32CHARS[parseInt(bits.slice(i,i+5),2)];
+      while(out.length % 8) out += '=';
+      setOut('b32-out', out);
+    } else {
+      const clean = v.toUpperCase().replace(/=/g,'');
+      let bits = '', out = '';
+      for(let c of clean) {
+        const idx = B32CHARS.indexOf(c);
+        if(idx < 0) continue;
+        bits += idx.toString(2).padStart(5,'0');
+      }
+      for(let i=0;i+8<=bits.length;i+=8) out += String.fromCharCode(parseInt(bits.slice(i,i+8),2));
+      setOut('b32-out', out);
+    }
+  } catch(e) { setOut('b32-out','ERROR: '+e.message); }
+}
+
+// Hex
+function hexEncode() {
+  const v = document.getElementById('hex-input').value;
+  setOut('hex-out', Array.from(v).map(c=>c.charCodeAt(0).toString(16).padStart(2,'0')).join(''));
+}
+function hexDecode() {
+  const v = document.getElementById('hex-input').value.replace(/\s|0x/g,'');
+  try {
+    let out = '';
+    for(let i=0;i<v.length;i+=2) out += String.fromCharCode(parseInt(v.slice(i,i+2),16));
+    setOut('hex-out', out);
+  } catch(e) { setOut('hex-out','ERROR: '+e.message); }
+}
+
+// URL
+function urlEnc(mode) {
+  const v = document.getElementById('url-input').value;
+  setOut('url-out', mode==='encode' ? encodeURIComponent(v) : decodeURIComponent(v));
+}
+
+// Binary
+function binConv(mode) {
+  const v = document.getElementById('bin-input').value.trim();
+  if(mode==='encode') {
+    setOut('bin-out', Array.from(v).map(c=>c.charCodeAt(0).toString(2).padStart(8,'0')).join(' '));
+  } else {
+    const bins = v.replace(/\s+/g,' ').split(' ');
+    setOut('bin-out', bins.map(b=>String.fromCharCode(parseInt(b,2))).join(''));
+  }
+}
+
+// Hash
+async function genHash(algo) {
+  const v = document.getElementById('hash-input').value;
+  const enc = new TextEncoder().encode(v);
+  const buf = await crypto.subtle.digest(algo, enc);
+  const hex = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  setOut('hash-out', algo + ': ' + hex);
+}
+
+function identifyHash() {
+  const v = document.getElementById('hashid-input').value.trim();
+  const results = [];
+  const len = v.length;
+  const isHex = /^[0-9a-fA-F]+$/.test(v);
+  if(isHex && len===32) results.push({name:'MD5',conf:'high'});
+  if(isHex && len===40) results.push({name:'SHA-1',conf:'high'});
+  if(isHex && len===64) results.push({name:'SHA-256',conf:'high'});
+  if(isHex && len===128) results.push({name:'SHA-512',conf:'high'});
+  if(v.startsWith('$2b$') || v.startsWith('$2a$')) results.push({name:'bcrypt',conf:'high'});
+  if(v.startsWith('$1$')) results.push({name:'MD5-crypt',conf:'high'});
+  if(v.startsWith('$5$')) results.push({name:'SHA-256-crypt',conf:'high'});
+  if(v.startsWith('$6$')) results.push({name:'SHA-512-crypt',conf:'high'});
+  if(isHex && len===56) results.push({name:'SHA-224',conf:'high'});
+  if(isHex && len===96) results.push({name:'SHA-384',conf:'high'});
+  if(!results.length) results.push({name:'Unknown / not a standard hash',conf:'low'});
+  const container = document.getElementById('hashid-out');
+  container.innerHTML = results.map(r=>`
+    <div class="id-row">
+      <span class="id-name">${r.name}</span>
+      <span class="id-conf conf-${r.conf}">${r.conf.toUpperCase()} CONFIDENCE</span>
+    </div>`).join('');
+}
+
+// Caesar
+function caesar(mode) {
+  const v = document.getElementById('caesar-input').value;
+  const shift = parseInt(document.getElementById('caesar-shift').value) % 26;
+  const s = mode==='decode' ? (26-shift)%26 : shift;
+  setOut('caesar-out', v.replace(/[a-zA-Z]/g, c => {
+    const base = c <= 'Z' ? 65 : 97;
+    return String.fromCharCode((c.charCodeAt(0)-base+s)%26+base);
+  }));
+}
+
+function caesarBrute() {
+  const v = document.getElementById('caesar-input').value;
+  let out = '';
+  for(let s=1;s<=25;s++) {
+    const result = v.replace(/[a-zA-Z]/g, c => {
+      const base = c <= 'Z' ? 65 : 97;
+      return String.fromCharCode((c.charCodeAt(0)-base+s)%26+base);
+    });
+    out += `ROT${s}: ${result}\n`;
+  }
+  setOut('caesar-out', out);
+}
+
+// ROT13
+function rot13Conv() {
+  const v = document.getElementById('rot13-input').value;
+  setOut('rot13-out', v.replace(/[a-zA-Z]/g, c => {
+    const base = c <= 'Z' ? 65 : 97;
+    return String.fromCharCode((c.charCodeAt(0)-base+13)%26+base);
+  }));
+}
+
+// Atbash
+function atbash() {
+  const v = document.getElementById('atbash-input').value;
+  setOut('atbash-out', v.replace(/[a-zA-Z]/g, c => {
+    const base = c <= 'Z' ? 65 : 97;
+    return String.fromCharCode(base+25-(c.charCodeAt(0)-base));
+  }));
+}
+
+// Vigenère
+function vigenere(mode) {
+  const v = document.getElementById('vig-input').value;
+  const key = document.getElementById('vig-key').value.toUpperCase().replace(/[^A-Z]/g,'');
+  if(!key) { setOut('vig-out','ERROR: Enter a key'); return; }
+  let ki = 0;
+  setOut('vig-out', v.replace(/[a-zA-Z]/g, c => {
+    const base = c <= 'Z' ? 65 : 97;
+    const k = key.charCodeAt(ki%key.length)-65;
+    ki++;
+    const shift = mode==='encode' ? k : (26-k);
+    return String.fromCharCode((c.charCodeAt(0)-base+shift)%26+base);
+  }));
+}
+
+// Morse
+const MORSE = {A:'.-',B:'-...',C:'-.-.',D:'-..',E:'.',F:'..-.',G:'--.',H:'....',I:'..',J:'.---',K:'-.-',L:'.-..',M:'--',N:'-.',O:'---',P:'.--.',Q:'--.-',R:'.-.',S:'...',T:'-',U:'..-',V:'...-',W:'.--',X:'-..-',Y:'-.--',Z:'--..',0:'-----',1:'.----',2:'..---',3:'...--',4:'....-',5:'.....',6:'-....',7:'--...',8:'---..',9:'----.',' ':'/'};
+const MORSE_REV = Object.fromEntries(Object.entries(MORSE).map(([k,v])=>[v,k]));
+function morse(mode) {
+  const v = document.getElementById('morse-input').value.trim().toUpperCase();
+  if(mode==='encode') {
+    setOut('morse-out', v.split('').map(c=>MORSE[c]||'').filter(Boolean).join(' '));
+  } else {
+    setOut('morse-out', v.split(' ').map(m=>MORSE_REV[m]||'?').join('').toLowerCase());
+  }
+}
+
+// Auto Identifier
+function identifyString() {
+  const v = document.getElementById('identify-input').value.trim();
+  const results = [];
+  if(!v) return;
+
+  const isHex = /^[0-9a-fA-F]+$/.test(v);
+  const isB64 = /^[A-Za-z0-9+/]+=*$/.test(v) && v.length%4===0;
+  const isB32 = /^[A-Z2-7]+=*$/i.test(v) && v.length%8===0;
+  const isBin = /^[01\s]+$/.test(v) && v.replace(/\s/g,'').length%8===0;
+  const isMorse = /^[.\-\/\s]+$/.test(v);
+  const isUrl = v.includes('%') && /%[0-9a-fA-F]{2}/.test(v);
+
+  if(isHex && v.length===32) results.push({name:'MD5 Hash',conf:'high',color:'red'});
+  if(isHex && v.length===40) results.push({name:'SHA-1 Hash',conf:'high',color:'red'});
+  if(isHex && v.length===64) results.push({name:'SHA-256 Hash',conf:'high',color:'red'});
+  if(isHex && v.length===128) results.push({name:'SHA-512 Hash',conf:'high',color:'red'});
+  if(isB64 && v.endsWith('=')) results.push({name:'Base64 Encoded',conf:'high',color:'green'});
+  else if(isB64) results.push({name:'Base64 Encoded (no padding)',conf:'med',color:'green'});
+  if(isB32) results.push({name:'Base32 Encoded',conf:'high',color:'amber'});
+  if(isHex && !results.length) results.push({name:'Hexadecimal / Base16',conf:'high',color:'blue'});
+  if(isBin) results.push({name:'Binary Encoded',conf:'high',color:'blue'});
+  if(isMorse) results.push({name:'Morse Code',conf:'high',color:'red'});
+  if(isUrl) results.push({name:'URL Encoded',conf:'high',color:'green'});
+  if(v.startsWith('$2b$')||v.startsWith('$2a$')) results.push({name:'bcrypt Hash',conf:'high',color:'red'});
+
+  // Try base64 decode to check if it gives ASCII
+  if(isB64) {
+    try {
+      const dec = atob(v);
+      if(/^[\x20-\x7e]*$/.test(dec)) results.push({name:`Base64 → "${dec.slice(0,40)}${dec.length>40?'...':''}"`,conf:'high',color:'green'});
+    } catch(e){}
+  }
+
+  if(!results.length) results.push({name:'Could not identify — try CyberChef or dcode.fr',conf:'low',color:'muted'});
+
+  const container = document.getElementById('identify-results');
+  container.innerHTML = results.map(r=>`
+    <div class="id-row">
+      <span class="id-name" style="color:var(--${r.color})">${r.name}</span>
+      <span class="id-conf conf-${r.conf}">${r.conf.toUpperCase()} CONFIDENCE</span>
+    </div>`).join('');
+}
+</script>
+</body>
+</html>
